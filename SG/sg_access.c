@@ -1,0 +1,17 @@
+#define SG_PRIVATE_DEFS
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include "../Headers/SG.h"
+#include "../Headers/Cell.h"
+#include "../Headers/Sim.h"
+#include "../Headers/Face.h"
+#include "../Headers/GravMass.h"
+#include "../Headers/header.h"
+#include "../Headers/MPIsetup.h"
+
+double sg_get_r(struct poisson* thePoisson,int i){
+	int p=thePoisson->r_rank;
+	return (thePoisson->N0_r[p]+i+0.5)*thePoisson->dr;
+}
+
