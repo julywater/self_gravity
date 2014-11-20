@@ -4,7 +4,7 @@
 #include <math.h>
 #include "../SG.h"
 #include"../paul.h"
-void cell_write_Force(struct cell*,double *,int);
+void cell_write_Force(struct cell*,double ,int);
 void interp(double *x_disc,double *y_disc,int N,double *y_cylinder,int M,int direction){
 	int i=1;
 	if(x_disc[0]<0) x_disc[0]+=2*M_PI;
@@ -73,97 +73,79 @@ void interp(double *x_disc,double *y_disc,int N,double *y_cylinder,int M,int dir
 		printf("wrong parameter\n");
 	free(x_cylinder);
 }
-void cylinder_interp(struct Sim *theSim,struct Cell ***theCells,struct poisson *thePoisson,struct MPIsetup *theMPIsetup){
+void cylinder_interp(struct domain* theDomain,struct poisson *thePoisson){
+	struct cell ** theCells = theDomain->theCells;
 	int i,j,k;
 	int N_p=thePoisson->N_p;
 	int N_r=thePoisson->N_r;
 	int N_z=thePoisson->N_z;
 	double *rho_new;
-	double *rho_old=malloc(sizeof(double)*sim_N_p(theSim,thePoisson->rmax));
-	double *phi_old=malloc(sizeof(double)*sim_N_p(theSim,thePoisson->rmax));
-	int rank=mpisetup_MyProc(theMPIsetup);
+	int rmax=thePoisson->rmax;
+	int * Np_disco = theDomain->Np;
+	double *rho_disco=malloc(sizeof(double)*Np_disco[rmax]);
+	double *phi_disco=malloc(sizeof(double)*Np_disco[rmax]);
+
 	for( k=0;k<N_z; ++k ){
 		int k_disco=k+thePoisson->zmin;
 		for( i=0; i<N_r; ++i ){
 			int i_disco=i+thePoisson->rmin;
+			int ik = i_disco+theDomain->Nr*k_disco;
 			rho_new=thePoisson->density+(k*N_r+i)*N_p;
-			for( j=0 ; j<sim_N_p(theSim,i_disco) ; ++j){
-				struct Cell* c=cell_single(theCells,i_disco,j,k_disco);
-		        	if(cell_prim(c,RHO)<pow(10,-4))
-					rho_old[j]=0;
+			for( j=0 ; j<Np_disco[ik]; ++j){
+				struct cell * c = &(theCells[ik][j]);
+				if(Np_disco[ik]>NP_disco[rmax]){
+					realloc(phi_disco,Np_disco[ik]);
+					realloc(rho_disco,Np_disco[ik]);
+				}
+		        if(cell_prim(c,RHO)<pow(10,-4))
+					rho_disco[j]=0;
 				else
-					rho_old[j]=4.0*M_PI*cell_prim(c,RHO)*pow(thePoisson->dr,2);
-				phi_old[j]=cell_tiph(c)-0.5*cell_dphi(c);
+					rho_disco[j]=4.0*M_PI*cell_prim(c,RHO)*pow(thePoisson->dr,2);
+				phi_disco[j]=cell_tiph(c)-0.5*cell_dphi(c);
 			}
-		        interp(phi_old,rho_old,sim_N_p(theSim,i_disco),rho_new,N_p,FORWARD);
-               } 
-        }
-	free(phi_old);
-	free(rho_old);   
+		    interp(phi_disco,rho_disco,Np_disco[ik],rho_new,N_p,FORWARD);
+        } 
+    }
+	free(phi_disco);
+	free(rho_disco);   
 
 }	
-
-void disco_interp(struct Sim *theSim,struct Cell ***theCells,struct poisson *thePoisson){
-	int i,j,k;
-        int N_p=thePoisson->N_p;
-        int N_r=thePoisson->N_r;
-        int N_z=thePoisson->N_z;
-        double *V=thePoisson->density;
-	int rmax=thePoisson->rmax;
-        double *phi_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
-        double *V_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
 /*
-	FILE *fp;
-	fp=fopen("potential.dat","w");
-	double dz=1.0/N_z;
-        double dr=1.0/N_r;
-	for( k=0;k<N_z; ++k ){
-                double z=(k+0.5)*dz;
-                for( i=0; i<N_r; ++i ){
-                        double r=(i+0.5)*dr;
-			V=thePoisson->density+(k*N_r+i)*N_p;
-			fprintf(fp,"%f   %f   %f\n",z,r,*V);
-	}
-	}
-	fclose(fp);
-*/
+void disco_interp(struct domain *theDomain,struct poisson *thePoisson){
+	struct cell ** theCells = theDomain->theCells;
+	int i,j,k;
+    int N_p=thePoisson->N_p;
+    int N_r=thePoisson->N_r;
+    int N_z=thePoisson->N_z;
+    double *V=thePoisson->density;
+	int rmax=thePoisson->rmax;
+    double *phi_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
+    double *V_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
+    int * Np_disco = theDomain->Np;
+	
 	for( k=0;k<N_z; ++k ){
 		int k_disco=k+thePoisson->zmin;
-		double zm = sim_FacePos(theSim,k_disco-1,Z_DIR);
-		double zp = sim_FacePos(theSim,k_disco,Z_DIR);
-		double z=0.5*(zm+zp);
                 for( i=0;i<N_r; ++i ){
-			int i_disco=i+thePoisson->rmin;
-		        double rm = sim_FacePos(theSim,i-1,R_DIR);
-                        double rp = sim_FacePos(theSim,i,R_DIR);
-			double r=0.5*(rm+rp);
-                        V=thePoisson->density+(k*N_r+i)*N_p;
-                        for( j=0 ; j<sim_N_p(theSim,i_disco) ; ++j){
-                                struct Cell* c=cell_single(theCells,i_disco,j,k_disco);
-                                phi_disco[j]=cell_tiph(c)-0.5*cell_dphi(c);
-                        }
+					int i_disco=i+thePoisson->rmin;
+					int ik = i_disco+theDomain->Nr*k_disco;
+                    V=thePoisson->density+(k*N_r+i)*N_p;
+                    for( j=0;j<Np_disco[ik]; ++j){
+                        struct Cell* c = &(theCells[ik][j]);
+                        phi_disco[j]=cell_tiph(c)-0.5*cell_dphi(c);
+                    }
 
-                        interp(phi_disco,V_disco,sim_N_p(theSim,i_disco),V,N_p,BACKWARD);
-			for(j=0;j<sim_N_p(theSim,i_disco) ; ++j){
-				struct Cell* c=cell_single(theCells,i_disco,j,k_disco);
-				cell_write_V(c,V_disco[j]);
-//				double phi=cell_tiph(c)-0.5*cell_dphi(c);
-//				double x=r*cos(phi);
-//				double y=r*sin(phi);
-//				double R=sqrt(pow((x-0.0),2)+y*y+z*z);
-//				if(z>0&&z<=fabs(thePoisson->dr))
-//				fprintf(fp,"%f   %f\n",R,V_disco[j]);
-			}
-//			free(phi_disco);
-//                        free(V_disco);
+                        interp(phi_disco,V_disco,Np_disco[ik],V,N_p,BACKWARD);
+					for(j=0;j<Np_disco[ik]; ++j){
+						struct Cell* c = &(theCells[ik][j]);
+						cell_write_V(c,V_disco[j]);
+					}
 		}
-		
-        }
+    }
 	free(phi_disco);
 	free(V_disco);
 
 }
-
+*/
 
 void disco_force_interp(struct domain* theDomain,struct poisson *thePoisson,int direction){
 	struct cell ** theCells = theDomain->theCells;
@@ -173,24 +155,28 @@ void disco_force_interp(struct domain* theDomain,struct poisson *thePoisson,int 
     int N_z=thePoisson->N_z;
     double *Force=thePoisson->buffer;
 	int rmax=thePoisson->rmax;
-	double *phi_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
-	double *force_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
-	 int * Np_disco = theDomain->Np;
+	int * Np_disco = theDomain->Np;
+	double *phi_disco=malloc(sizeof(double)*Np_disco[rmax]);
+	double *force_disco=malloc(sizeof(double)*Np_disco[rmax]);
         for( k=0;k<N_z; ++k ){
                 int k_disco=k+thePoisson->zmin;
                 for( i=0;i<N_r; ++i ){
                         int i_disco=i+thePoisson->rmin;
 						int ik = i_disco+theDomain->Nr*k_disco;
                         Force=thePoisson->buffer+(k*N_r+i)*N_p;
+						if(Np_disco[ik]>NP_disco[rmax]){
+							realloc(phi_disco,Np_disco[ik]);
+							realloc(force_disco,Np_disco[ik]);
+						}
 //get phi distribution of the disco grid
                         for( j=0 ; j<Np_disco[ik] ; ++j){
-                                struct cell * c = &(theCells[ik][j]);
-                                phi_disco[j]=cell_tiph(c)-0.5*cell_dphi(c);
+                            struct cell * c = &(theCells[ik][j]);
+                            phi_disco[j]=cell_tiph(c)-0.5*cell_dphi(c);
                         }
                         interp(phi_disco,force_disco,sim_N_p(theSim,i_disco),Force,N_p,BACKWARD);
                         for(j=0;j<Np_disco[ik]; ++j){
-                                struct cell * c = &(theCells[ik][j]);
-                                cell_write_Force(c,force_disco[j],direction);
+                            struct cell * c = &(theCells[ik][j]);
+                            cell_write_Force(c,force_disco[j],direction);
 						}
                 }
         }
