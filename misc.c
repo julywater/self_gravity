@@ -532,3 +532,8 @@ void AMR( struct domain * theDomain ){
    }
 }
 
+void cell_write_Force(struct cell* c,double force,direction){
+	c->Force[direction]=force;
+}
+	
+

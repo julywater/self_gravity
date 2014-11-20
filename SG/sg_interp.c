@@ -4,6 +4,7 @@
 #include <math.h>
 #include "../SG.h"
 #include"../paul.h"
+void cell_write_Force(struct cell*,double *,int);
 void interp(double *x_disc,double *y_disc,int N,double *y_cylinder,int M,int direction){
 	int i=1;
 	if(x_disc[0]<0) x_disc[0]+=2*M_PI;
@@ -165,6 +166,7 @@ void disco_interp(struct Sim *theSim,struct Cell ***theCells,struct poisson *the
 
 
 void disco_force_interp(struct domain* theDomain,struct poisson *thePoisson,int direction){
+	struct cell ** theCells = theDomain->theCells;
     int i,j,k;
     int N_p=thePoisson->N_p;
     int N_r=thePoisson->N_r;
@@ -173,27 +175,24 @@ void disco_force_interp(struct domain* theDomain,struct poisson *thePoisson,int 
 	int rmax=thePoisson->rmax;
 	double *phi_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
 	double *force_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
+	 int * Np_disco = theDomain->Np;
         for( k=0;k<N_z; ++k ){
                 int k_disco=k+thePoisson->zmin;
                 for( i=0;i<N_r; ++i ){
                         int i_disco=i+thePoisson->rmin;
+						int ik = i_disco+theDomain->Nr*k_disco;
                         Force=thePoisson->buffer+(k*N_r+i)*N_p;
-                       
 //get phi distribution of the disco grid
-                        for( j=0 ; j<sim_N_p(theSim,i_disco) ; ++j){
-                                struct Cell* c=cell_single(theCells,i_disco,j,k_disco);
+                        for( j=0 ; j<Np_disco[ik] ; ++j){
+                                struct cell * c = &(theCells[ik][j]);
                                 phi_disco[j]=cell_tiph(c)-0.5*cell_dphi(c);
                         }
-
                         interp(phi_disco,force_disco,sim_N_p(theSim,i_disco),Force,N_p,BACKWARD);
-                        for(j=0;j<sim_N_p(theSim,i_disco) ; ++j){
-                                struct Cell* c=cell_single(theCells,i_disco,j,k_disco);
+                        for(j=0;j<Np_disco[ik]; ++j){
+                                struct cell * c = &(theCells[ik][j]);
                                 cell_write_Force(c,force_disco[j],direction);
 						}
-
-
                 }
-
         }
 	free(phi_disco);
 	free(force_disco);
