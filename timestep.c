@@ -1,10 +1,10 @@
-#include "paul.h"
-
+#include"paul.h"
+#include"SG.h"
 void planet_RK_copy( struct planet * );
-void onestep( struct domain * , double , double , int , double );
+void onestep( struct domain * , struct poisson *,double , double , int , double );
 void add_diagnostics( struct domain * , double );
 
-void timestep( struct domain * theDomain , double dt ){
+void timestep( struct domain * theDomain ,struct poisson * thepoisson, double dt ){
    
    struct cell ** theCells = theDomain->theCells;
    int Nr = theDomain->Nr;
@@ -26,8 +26,8 @@ void timestep( struct domain * theDomain , double dt ){
       planet_RK_copy( theDomain->thePlanets + p );
    }
 
-   onestep( theDomain , 0.0 ,     dt , 0 , dt );
-   onestep( theDomain , 0.5 , 0.5*dt , 1 , dt );
+   onestep( theDomain ,thepoisson, 0.0 ,     dt , 0 , dt );
+   onestep( theDomain ,thepoisson, 0.5 , 0.5*dt , 1 , dt );
 
    add_diagnostics( theDomain , dt );
    theDomain->t += dt;   

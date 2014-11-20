@@ -1,13 +1,10 @@
-#define SG_PRIVATE_DEFS
+//#define SG_PRIVATE_DEFS
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include<fftw3.h>
-#include "../Headers/SG.h"
-#include "../Headers/Cell.h"
-#include "../Headers/Sim.h"
-#include "../Headers/Face.h"
-#include "../Headers/header.h"
+#include "../SG.h"
+#include "../paul.h"
 /*
 struct Tridiagsys{
 	double *eigenvalues;
@@ -161,7 +158,7 @@ void destroy_tridiagsys(struct Tridiagsys* tri){
 	free(tri);
 }
 */
-void sg_route(struct Sim *theSim,struct Cell*** theCells,struct MPIsetup *theMPIsetup,struct poisson *thePoisson){
+void sg_route(struct Domain *theDomain,struct poisson *thePoisson){
 //	struct Tridiagsys* thetridiag=alloc_tridiagsys(thePoisson);
 	tridiag_setup(thePoisson);
 	int N_r=thePoisson->N_r;
@@ -170,7 +167,7 @@ void sg_route(struct Sim *theSim,struct Cell*** theCells,struct MPIsetup *theMPI
 	int N_k=thePoisson->N_k;
 	int i,j,k;
 	int size=thePoisson->size;
-	int rank=mpisetup_MyProc(theMPIsetup);
+	int rank=theDomain->rank;
 	cylinder_interp(theSim,theCells,thePoisson,theMPIsetup);
 	set_bndry(theSim,theCells,theMPIsetup,thePoisson);
 	density_fft(thePoisson);
@@ -179,14 +176,14 @@ void sg_route(struct Sim *theSim,struct Cell*** theCells,struct MPIsetup *theMPI
 	double *bufferstore=thePoisson->density;
 
 	int *sendcnts=thePoisson->sendcnts;
-        int *sdispls=thePoisson->sdispls;
-        int *recvcnts=thePoisson->recvcnts;
-        int *rdispls=thePoisson->rdispls;
+    int *sdispls=thePoisson->sdispls;
+    int *recvcnts=thePoisson->recvcnts;
+    int *rdispls=thePoisson->rdispls;
 	
-          MPI_Alltoallv(buffersend,sendcnts,sdispls,MPI_DOUBLE,bufferstore,recvcnts,rdispls,MPI_DOUBLE,MPI_COMM_WORLD);
-          sinefft(thePoisson);
-          solveVp(rank,thePoisson);
-          sinefft(thePoisson);    
+    MPI_Alltoallv(buffersend,sendcnts,sdispls,MPI_DOUBLE,bufferstore,recvcnts,rdispls,MPI_DOUBLE,MPI_COMM_WORLD);
+    sinefft(thePoisson);
+    solveVp(rank,thePoisson);
+    sinefft(thePoisson);    
 /*
 	if(rank==0){
 	int i,j,k;
@@ -209,12 +206,9 @@ void sg_route(struct Sim *theSim,struct Cell*** theCells,struct MPIsetup *theMPI
 	int direction=0;
 	for(direction=0;direction<3;direction++){
 		cal_force(thePoisson,direction);	
-		disco_force_interp(theSim,theCells,thePoisson,direction);
+		disco_force_interp(theDomain,thePoisson,direction);
 	}
 //	disco_interp(theSim,theCells,thePoisson);
 //	destroy_tridiagsys(thetridiag);
-//	free(sendcnts);
-//	free(sdispls);
-//	free(recvcnts);
-//	free(rdispls);	
+
 }

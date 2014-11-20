@@ -1,6 +1,5 @@
-
 #include "paul.h"
-
+#include"SG.h"
 void AMR( struct domain * ); 
 void move_BCs( struct domain * , double );
 
@@ -32,7 +31,7 @@ extern void burning(struct domain *,double);
 //
 
 
-void onestep( struct domain * theDomain , double RK , double dt , int last_step , double global_dt ){
+void onestep( struct domain * theDomain ,struct poisson * thePoisson, double RK , double dt , int last_step , double global_dt ){
 
 
   
@@ -60,7 +59,8 @@ void onestep( struct domain * theDomain , double RK , double dt , int last_step 
       trans_flux( theDomain , theFaces_2 , nfz[NRZ2] , dt , 2 );
    }
 
-
+   //self-gravity
+   sg_route(theDomain,thePoisson);
    add_source( theDomain , dt );
    move_cells( theDomain , RK , dt );
    if( !planet_motion_analytic() || !last_step ){
@@ -70,7 +70,7 @@ void onestep( struct domain * theDomain , double RK , double dt , int last_step 
    clean_pi( theDomain );
    calc_dp( theDomain );
 
-    if(last_step)
+//    if(last_step)
 //       burning(theDomain,global_dt);
 
    calc_prim( theDomain );

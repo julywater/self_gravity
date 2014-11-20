@@ -2,11 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "../Headers/SG.h"
-#include "../Headers/Cell.h"
-#include "../Headers/Sim.h"
-#include "../Headers/Face.h"
-#include "../Headers/header.h"
+#include "../SG.h"
+#include"../paul.h"
 void interp(double *x_disc,double *y_disc,int N,double *y_cylinder,int M,int direction){
 	int i=1;
 	if(x_disc[0]<0) x_disc[0]+=2*M_PI;
@@ -167,12 +164,12 @@ void disco_interp(struct Sim *theSim,struct Cell ***theCells,struct poisson *the
 }
 
 
-void disco_force_interp(struct Sim *theSim,struct Cell ***theCells,struct poisson *thePoisson,int direction){
-        int i,j,k;
-        int N_p=thePoisson->N_p;
-        int N_r=thePoisson->N_r;
-        int N_z=thePoisson->N_z;
-        double *Force=thePoisson->buffer;
+void disco_force_interp(struct domain* theDomain,struct poisson *thePoisson,int direction){
+    int i,j,k;
+    int N_p=thePoisson->N_p;
+    int N_r=thePoisson->N_r;
+    int N_z=thePoisson->N_z;
+    double *Force=thePoisson->buffer;
 	int rmax=thePoisson->rmax;
 	double *phi_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
 	double *force_disco=malloc(sizeof(double)*sim_N_p(theSim,rmax));
@@ -180,11 +177,8 @@ void disco_force_interp(struct Sim *theSim,struct Cell ***theCells,struct poisso
                 int k_disco=k+thePoisson->zmin;
                 for( i=0;i<N_r; ++i ){
                         int i_disco=i+thePoisson->rmin;
-//                      double *phi_disco=malloc(sizeof(double)*sim_N_p(theSim,i_disco));
-//                      double *force_disco=malloc(sizeof(double)*sim_N_p(theSim,i_disco));
                         Force=thePoisson->buffer+(k*N_r+i)*N_p;
-                        //or V+=N_p;
-
+                       
 //get phi distribution of the disco grid
                         for( j=0 ; j<sim_N_p(theSim,i_disco) ; ++j){
                                 struct Cell* c=cell_single(theCells,i_disco,j,k_disco);
@@ -195,9 +189,8 @@ void disco_force_interp(struct Sim *theSim,struct Cell ***theCells,struct poisso
                         for(j=0;j<sim_N_p(theSim,i_disco) ; ++j){
                                 struct Cell* c=cell_single(theCells,i_disco,j,k_disco);
                                 cell_write_Force(c,force_disco[j],direction);
-			}
-//			free(phi_disco);
-//                      free(force_disco);
+						}
+
 
                 }
 
