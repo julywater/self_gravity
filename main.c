@@ -3,7 +3,7 @@
 #include "helm.h"
 int mpiSetup( struct domain * , int , char *[] );
 void setupGrid( struct domain * );
-void timestep( struct domain * , double );
+void timestep( struct domain * ,struct poisson *, double );
 void setupCells( struct domain * );
 void regrid( struct domain * );
 void exchangeData( struct domain * , int );
@@ -18,6 +18,8 @@ void possiblyOutput( struct domain * , int );
 
 void start_clock( struct domain * );
 void generate_log( struct domain * );
+
+struct poisson* poisson_create(struct domain *);
 
 double * table;
 
@@ -61,13 +63,15 @@ int main( int argc , char * argv[] ){
       fclose(rFile);
    }
 
+   struct poisson* thepoisson=poisson_create(&theDomain);
+   
    MPI_Barrier(theDomain.theComm);
    while( !(theDomain.final_step) ){
 
       double dt = getmindt( &theDomain );
       check_dt( &theDomain , &dt );
       possiblyOutput( &theDomain , 0 );
-      timestep( &theDomain , dt );
+      timestep( &theDomain ,thepoisson, dt );
 
    }
 

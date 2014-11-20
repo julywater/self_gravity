@@ -355,7 +355,7 @@ void setup_faces( struct domain * theDomain , struct face ** theFaces , int * nn
 
 void source( double * , double * , double * , double * , double );
 void planet_src( struct planet * , double * , double * , double * , double * , double );
-
+void source_sg(double *,double *,double *,double);
 void add_source( struct domain * theDomain , double dt ){
 
    struct cell ** theCells = theDomain->theCells;
@@ -383,6 +383,7 @@ void add_source( struct domain * theDomain , double dt ){
             for( p=0 ; p<Npl ; ++p ){
                  planet_src( thePlanets+p , c->prim , c->cons , xp , xm , dV*dt );
             }
+			source_sg(c->prim,c->cons,c->force,dV*dt);
          }    
       }    
    }   
