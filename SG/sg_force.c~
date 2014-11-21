@@ -2,8 +2,11 @@
 #include <stdio.h>
 #include <math.h>
 #include<fftw3.h>
-#include "../SG.h"
-#include"../paul.h"
+#include "../Headers/SG.h"
+#include "../Headers/Cell.h"
+#include "../Headers/Sim.h"
+#include "../Headers/Face.h"
+#include "../Headers/header.h"
 //phi force
 void cal_force(struct poisson* thePoisson,int DIRECTION){
 	int i,j,k;

@@ -149,7 +149,15 @@ void tridiag_setup(struct poisson* thePoisson){
         for(i=0;i<Ny;i++)
                 thePoisson->eigenvalues[i]=-4.0+2*cos((i+1)*M_PI/(Ny+1));
 }
-
+/*	
+void destroy_tridiagsys(struct Tridiagsys* tri){
+	free(tri->a);
+	free(tri->b);
+	free(tri->c);
+	free(tri->eigenvalues);
+	free(tri);
+}
+*/
 void sg_route(struct Domain *theDomain,struct poisson *thePoisson){
 //	struct Tridiagsys* thetridiag=alloc_tridiagsys(thePoisson);
 	tridiag_setup(thePoisson);
@@ -160,22 +168,22 @@ void sg_route(struct Domain *theDomain,struct poisson *thePoisson){
 	int i,j,k;
 	int size=thePoisson->size;
 	int rank=theDomain->rank;
-	cylinder_interp(theDomain,thePoisson);
-	set_bndry(theDomain,thePoisson);
+	cylinder_interp(theSim,theCells,thePoisson,theMPIsetup);
+	set_bndry(theSim,theCells,theMPIsetup,thePoisson);
 	density_fft(thePoisson);
 	mpi_arrange(thePoisson->density,thePoisson->buffer,thePoisson);
 	double *buffersend=thePoisson->buffer;
 	double *bufferstore=thePoisson->density;
 
 	int *sendcnts=thePoisson->sendcnts;
-        int *sdispls=thePoisson->sdispls;
-        int *recvcnts=thePoisson->recvcnts;
-        int *rdispls=thePoisson->rdispls;
+    int *sdispls=thePoisson->sdispls;
+    int *recvcnts=thePoisson->recvcnts;
+    int *rdispls=thePoisson->rdispls;
 	
-        MPI_Alltoallv(buffersend,sendcnts,sdispls,MPI_DOUBLE,bufferstore,recvcnts,rdispls,MPI_DOUBLE,MPI_COMM_WORLD);
-        sinefft(thePoisson);
-        solveVp(rank,thePoisson);
-        sinefft(thePoisson);    
+    MPI_Alltoallv(buffersend,sendcnts,sdispls,MPI_DOUBLE,bufferstore,recvcnts,rdispls,MPI_DOUBLE,MPI_COMM_WORLD);
+    sinefft(thePoisson);
+    solveVp(rank,thePoisson);
+    sinefft(thePoisson);    
 /*
 	if(rank==0){
 	int i,j,k;
