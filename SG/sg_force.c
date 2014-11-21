@@ -3,7 +3,10 @@
 #include <math.h>
 #include<fftw3.h>
 #include "../SG.h"
-#include"../paul.h"
+double sg_get_r(struct poisson* thePoisson,int i){
+	int p=thePoisson->r_rank;
+	return (thePoisson->N0_r[p]+i+0.5)*thePoisson->dr;
+}
 //phi force
 void cal_force(struct poisson* thePoisson,int DIRECTION){
 	int i,j,k;
